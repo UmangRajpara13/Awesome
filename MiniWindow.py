@@ -3,6 +3,8 @@ from PyQt5 import QtWidgets
 import os
 from PyQt5.QtGui import QIcon
 from AppsList import AllApps
+from fbs_runtime.application_context.PyQt5 import ApplicationContext
+
 
 class Ui_MiniWindow(QtWidgets.QMainWindow):
     def __init__(self, parent):
@@ -18,14 +20,8 @@ class Ui_MiniWindow(QtWidgets.QMainWindow):
         self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)
         self.verticalLayout.setObjectName("verticalLayout")
         self.setCentralWidget(self.centralwidget)
-        QtCore.QMetaObject.connectSlotsByName(self)
 
-    # def SaveAppSetup(self):
-    #     self.lineEdit = QtWidgets.QLineEdit(self.centralwidget)
-    #     self.lineEdit.setObjectName("lineEdit")
-    #     self.verticalLayout.addWidget(self.lineEdit)
-    #     _translate = QtCore.QCoreApplication.translate
-    #     self.setWindowTitle(_translate("MainWindow", "Save As"))
+        QtCore.QMetaObject.connectSlotsByName(self)
 
     def DirecotriesSetup(self):
         self.verticalLayout_2 = QtWidgets.QVBoxLayout()
@@ -89,11 +85,13 @@ class Ui_MiniWindow(QtWidgets.QMainWindow):
         self.setWindowTitle(_translate("Apps", "Apps"))
         self.refreashButton.setText(_translate("Refreash", "Refreash"))
 
-        apps = os.listdir("Apps")
+        self.appctxt = ApplicationContext()       # 1. Instantiate ApplicationContext
+        self.Apps = self.appctxt.get_resource('Apps')
+        apps = os.listdir(self.Apps)
         i = 0
         for app in apps:
             # get last app from json file
-            appicon = "Apps/" + app + "/icon/" + app
+            appicon = self.Apps + "/" + app + "/icon/" + app
             self.app = QtWidgets.QListWidgetItem(QIcon(appicon), app)
             self.appList.insertItem(i, self.app)
             i += 1

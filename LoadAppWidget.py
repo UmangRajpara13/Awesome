@@ -10,17 +10,22 @@ from DirectoriesBox import DirectoriesBox
 import UniversalVar
 from TextEdit import TextEdit
 import shutil
-from WorkerThread import Worker
+from Process import Worker
 import os
+from fbs_runtime.application_context.PyQt5 import ApplicationContext
 
 class LoadAppWidget(QtWidgets.QMainWindow):
     # Load from JSON file
     def __init__(self, parentWidget):
         super().__init__()
         self.parentWidget = parentWidget
+        self.appctxt = ApplicationContext()  # 1. Instantiate ApplicationContext
+        self.Apps = self.appctxt.get_resource('Apps')
+        self.icons = self.appctxt.get_resource('icons')
+
         if parentWidget.appNameText != "New":
             self.appName = parentWidget.appNameText
-            with open("Apps/" + self.appName + "/" + self.appName + ".json", "r") as read_file:
+            with open(self.Apps + "/" + self.appName + "/" + self.appName + ".json", "r") as read_file:
                 self.data = json.load(read_file)
         else:
             self.appName = "New"
@@ -73,29 +78,35 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.toolBar.setLayoutDirection(QtCore.Qt.RightToLeft)
         self.addToolBar(QtCore.Qt.BottomToolBarArea, self.toolBar)
 
-        addLink = QAction(QIcon("icons/edit"), "Ctrl+B", self)
+
+
+        addLink = QAction(QIcon(self.icons + "/edit"), "Ctrl+B", self)
         addLink.setShortcut("Ctrl+B")
         addLink.triggered.connect(self.AddLink)
 
-        addButton = QAction(QIcon("icons/newbutton"), "Ctrl+B", self)
+        addButton = QAction(QIcon(self.icons + "/newbutton"), "Ctrl+B", self)
         addButton.setShortcut("Ctrl+B")
         addButton.triggered.connect(self.AddButton)
 
-        saveAction = QAction(QIcon("icons/save"), "Ctrl+S", self)
+        saveAction = QAction(QIcon(self.icons + "/save"), "Ctrl+S", self)
         saveAction.setShortcut("Ctrl+S")
         saveAction.triggered.connect(self.Save)
 
-        hideAction = QAction(QIcon("icons/hide"), "Ctrl+H", self)
+        hideAction = QAction(QIcon(self.icons + "/hide"), "Ctrl+H", self)
         hideAction.setShortcut("Ctrl+S")
         hideAction.triggered.connect(self.Hide)
 
-        killThreadAction = QAction(QIcon("icons/kill"), "Ctrl+K", self)
-        killThreadAction.setShortcut("Ctrl+K")
-        killThreadAction.triggered.connect(self.KillThread)
+        killProcessAction = QAction(QIcon(self.icons + "/kill"), "Ctrl+K", self)
+        killProcessAction.setShortcut("Ctrl+K")
+        killProcessAction.triggered.connect(self.KillProcess)
 
-        clearAction = QAction(QIcon("icons/clear"), "Ctrl+D", self)
+        clearAction = QAction(QIcon(self.icons + "/clear"), "Ctrl+D", self)
         clearAction.setShortcut("Ctrl+S")
         clearAction.triggered.connect(self.Clear)
+
+        terminal = QAction(QIcon(self.icons + "/terminal"), "Alt+.", self)
+        terminal.setShortcut("Alt+.")
+        terminal.triggered.connect(self.Terminal)
 
         self.userInput = QtWidgets.QLineEdit()
         self.userInput.setClearButtonEnabled(True)
@@ -106,8 +117,10 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.toolBar.addAction(saveAction)
         self.toolBar.addAction(hideAction)
         self.toolBar.addAction(clearAction)
-        self.toolBar.addAction(killThreadAction)
+        self.toolBar.addAction(killProcessAction)
         self.toolBar.addWidget(self.userInput)
+        self.toolBar.addAction(terminal)
+
 
 
     def DeSerializeJson(self, data):
@@ -152,6 +165,10 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.directories.UpdateDirectoriesBox(self.directory)
         self.Save()
 
+    def Terminal(self):
+        print('here')
+        os.system("gnome-terminal -e 'bash -c \"cd " + self.directories.currentText() + "; exec bash\"'")
+
     def AddLink(self):
         self.addLinkWindow = Ui_MiniWindow(self)
         self.addLinkWindow.DirecotriesSetup()
@@ -168,7 +185,6 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         buttonName = self.userInput.text()
         self.terminal.append('Added New Button : ' + self.userInput.text())
         self.userInput.clear()
-
         self.buttonName.append(buttonName)
         self.buttonPosition.append("50,50")
         self.buttonObject.append(None)
@@ -193,10 +209,10 @@ class LoadAppWidget(QtWidgets.QMainWindow):
             self.worker.command = self.buttonCommand[self.buttonIndex]
             self.worker.link = self.directories.currentText()
 
-            self.WorkerThread()
+            self.WorkerProcess()
 
 
-    def WorkerThread(self):
+    def WorkerProcess(self):
 
         self.worker.run()
         self.worker.PrintOut.connect(self.PrintOutput)
@@ -227,17 +243,16 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.userInput.setFocus(False)
         self.userInput.clear()
 
-    def KillThread(self):
+    def KillProcess(self):
 
         if self.worker.p:
-            self.worker.stop()
+            self.terminal.setTextColor(QtGui.QColor(255, 0, 0, 255))
             self.terminal.append('--killed--')
-            self.PrintUserAndHost()
+            self.worker.stop()
 
     def PrintUserAndHost(self):
         self.terminal.setTextColor(QtGui.QColor(255,140,0,255))
         self.terminal.append(getpass.getuser() + '@' + socket.gethostname() + ' : ' + self.directories.currentText())
-
 
     def Save(self):
         if self.parentWidget.openAppsObjects[self.parentWidget.stackedWidget.currentIndex()].appName == "New":
@@ -266,11 +281,11 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.appName = self.newapp.lineEdit.text()
         self.newapp.close()
 
-        if not os.path.isdir("Apps/" + self.appName):
+        if not os.path.isdir(self.Apps + "/" + self.appName):
 
-            path = "Apps/" + self.appName
+            path = self.Apps + "/" + self.appName
             os.mkdir(path)
-            with open("Apps/" + self.appName + "/" + self.appName + ".json", "w") as write_file:
+            with open(self.Apps + "/" + self.appName + "/" + self.appName + ".json", "w") as write_file:
                 self.data = {
                     "appName" : self.appName,
                     "Configuration" : {
@@ -283,9 +298,9 @@ class LoadAppWidget(QtWidgets.QMainWindow):
                     }
                 }
                 json.dump(self.data, write_file, indent=5, separators=(',', ': '))
-            path = "Apps/" + self.appName + "/icon"
+            path = self.Apps + "/" + self.appName + "/icon"
             os.mkdir(path)
-            shutil.copy2("icons/script.png", path)
+            shutil.copy2(self.icons + "/script.png", path)
             os.rename( path + '/script.png', path + '/' + self.appName +'.png')
         else:
             print("Already Exist")
