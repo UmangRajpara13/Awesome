@@ -1,0 +1,56 @@
+{
+     "appName": "VCS",
+     "Configuration": {
+          "Buttons": [
+               "logOneline",
+               "commit",
+               "AddAll",
+               "Status",
+               "InIt",
+               "Amend",
+               "push"
+          ],
+          "Positions": [
+               "909.0,268.0",
+               "582.0,258.0",
+               "292.0,265.0",
+               "460.0,196.0",
+               "873.0,147.0",
+               "974.0,192.0",
+               "586.0,126.0"
+          ],
+          "Interpreters": [
+               "python3",
+               "python3",
+               "python3",
+               "python3",
+               "python3",
+               "python3",
+               "python3"
+          ],
+          "Modules": [
+               "Subprocess.py",
+               "Subprocess_With_Inputs.py",
+               "Subprocess.py",
+               "Subprocess.py",
+               "Subprocess.py",
+               "Subprocess_With_Inputs.py",
+               "Subprocess_With_Inputs.py",
+               "Subprocess.py"
+          ],
+          "Commands": [
+               "git log --oneline",
+               "git commit -m",
+               "git add .",
+               "git status",
+               "git init",
+               "git commit --amend -m",
+               "git push origin master",
+               "echo hello"
+          ],
+          "Directories": [
+               "/home/umang/Desktop/repos/Awesome",
+               "/home/umang/Desktop/repos/Database"
+          ]
+     }
+}

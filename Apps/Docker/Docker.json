@@ -1,0 +1,50 @@
+{
+     "appName": "Docker",
+     "Configuration": {
+          "Buttons": [
+               "list",
+               "run",
+               "delete",
+               "stop",
+               "images",
+               "running?"
+          ],
+          "Positions": [
+               "969.0,140.0",
+               "802.0,134.0",
+               "820.0,249.0",
+               "1014.0,216.0",
+               "724.0,190.0",
+               "603.0,88.0"
+          ],
+          "Interpreters": [
+               "python3",
+               "python3",
+               "python3",
+               "python3",
+               "python3",
+               "python3"
+          ],
+          "Modules": [
+               "Subprocess_Sudo.py",
+               "Subprocess_Sudo.py",
+               "Subprocess_Sudo.py",
+               "Subprocess_Sudo.py",
+               "Subprocess_Sudo.py",
+               "Subprocess_Sudo.py"
+          ],
+          "Commands": [
+               "sudo -S docker ps -a",
+               "echo hello",
+               "echo hello",
+               "echo hello",
+               "sudo -S docker images",
+               "sudo -S docker ps"
+          ],
+          "Directories": [
+               "/home/umang",
+               "/home",
+               "/home/umang"
+          ]
+     }
+}

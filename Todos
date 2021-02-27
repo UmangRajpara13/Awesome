@@ -1,0 +1,52 @@
+perfect its UI and core to what it stands for
+
+1 removal of dock widget for Qplaintextedit
+>x>ability to run py file or script located in desired directory
+	scripts must be on path and py must in Modules, as of now
+	not nacessary as ppl can add directory(link) in their subprocess
+
+>settings - theme and others
+>info - guide and other
+>update - to update exe file
+>user define app save on git
+>buttons cannot have same name
+>implement openapps/settings info MiniWindow stacked Widget
+>button size bigger than its name
+>addition of URLs with or seperate than directory, lets see
+> ability to run bash commands and py scripts from textwidget
+> make previous results of terminal readonly
+> use this soft for debugging this soft
+
+>x> ability to start a python interpreter from textedit
+	merge it into seperate App
+	lets not do what a terminal can do, instead perfect its UI and core to what it stands for
+
+	
+--Use cases--
+
+Git
+init, status, commit, log --onleine, add .
+
+-not push origin master yet
+
+Docker - some
+images, ps, ps -a, rmi, rm (container)
+
+Django 
+runserver, kill
+
+Ubuntu
+nautilus, ls
+
+node
+
+
+react
+
+
+
+Note:
+method name read not allowed in modules, create arbitrary names of functions and classes
+accessing gui from thread is prohibited, what if user access by mistake
+__init__ file inside modules was running the modules before starting awesome
+
