@@ -69,12 +69,11 @@ class ButtonProperties(QtWidgets.QMainWindow):
         try:
                 self.LoadElements()
         except:
-            print('something wrong with JSON')
-            self.parentWidget.terminal.append('There is somthing wrong with Json File for this App')
-            self.parentWidget.terminal.append('\nyou can fix it manually by editing Apps/'+self.parentWidget.appName+'/'+self.parentWidget.appName+'.json or,')
-            self.parentWidget.terminal.append('\nvisit www.Empower.com and download respective App Configuration(.json)')
-
-
+            message = '''There is somthing wrong with Json File for this App \n
+                         you can fix it manually by editing Apps/'+self.parentWidget.appName+'/'+self.parentWidget.appName+'.json or,\n
+                         visit www.Empower.com and download respective App Configuration(.json)'\n 
+                         '''
+            self.parentWidget.terminal.append(message)
 
         self.retranslateUi()
         QtCore.QMetaObject.connectSlotsByName(self)
@@ -104,6 +103,5 @@ class ButtonProperties(QtWidgets.QMainWindow):
         self.parentWidget.buttonInterpreter[self.buttonIndex] = self.interpreterEdit.text()
         self.parentWidget.buttonModule[self.buttonIndex] = self.moduleEdit.text()
         self.parentWidget.buttonCommand[self.buttonIndex] = self.commandEdit.text()
-
         self.parentWidget.Save()
 

@@ -31,9 +31,12 @@ class Ui_AutomationWindow(QtWidgets.QMainWindow):
         self.setObjectName("Awesome")
 
         # this is master style sheet affecting all child widgets
-        self.setStyleSheet("background-color: #333;\n"
-                           "color: #00FF00;\n"
-"                           font-family: Courier;")
+        # self.setStyleSheet("background-color: #333;\n"
+        #                    "color: #00FF00;\n"
+# "                           font-family: Courier;")
+#         self.setStyleSheet("background-color: #59360a;\n"
+#                            "color: #000000;\n"
+#                            "font-family: Courier;")
 
         self.centralwidget = QtWidgets.QWidget(self)
         self.centralwidget.setObjectName("centralwidget")
@@ -105,12 +108,13 @@ class Ui_AutomationWindow(QtWidgets.QMainWindow):
             self.openAppsObjects.append(None)
             self.openAppsObjects[self.openAppsCount] = LoadAppWidget(self)
             self.stackedWidget.setCurrentIndex(self.stackedWidget.addWidget(self.openAppsObjects[self.openAppsCount]))
+
             if item.text() != "New":
                 self.openAppsObjects[self.openAppsCount].DeSerializeJson(self.openAppsObjects[self.openAppsCount].data)
                 self.openAppsObjects[self.openAppsCount].CreateAttributes()
 
             if item.text() == "New":
-                self.openAppsObjects[self.stackedWidget.currentIndex()].appName = "New"
+                self.openAppsObjects[self.stackedWidget.currentIndex()].appName = "New "
 
             app = self.openAppsObjects[self.stackedWidget.currentIndex()].appName
             appicon = self.Apps + "/" + app + "/icon/" + app

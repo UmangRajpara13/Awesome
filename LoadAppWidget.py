@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from Button import Button
 from MiniWindow import Ui_MiniWindow
 from PyQt5.QtCore import Qt
-import json
+import json, logging
 import getpass, socket
 from PyQt5.QtWidgets import QAction
 from PyQt5.QtGui import QIcon
@@ -12,6 +12,7 @@ from TextEdit import TextEdit
 import shutil
 from Process import Worker
 import os
+from subprocess import run, PIPE
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 
 class LoadAppWidget(QtWidgets.QMainWindow):
@@ -22,20 +23,95 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.appctxt = ApplicationContext()  # 1. Instantiate ApplicationContext
         self.Apps = self.appctxt.get_resource('Apps')
         self.icons = self.appctxt.get_resource('icons')
+        self.Operations = self.appctxt.get_resource('operations')
+
+        self.worker = Worker()
+        self.worker.PrintOut.connect(self.PrintOutput)
+        self.worker.PrintError.connect(self.PrintError)
+
+#internal
+        # self.worker.PrintOut.connect(self.HandleSysOutput)
+        self.worker.Input.connect(self.TakeSysInput)
+        # self.worker.finished.connect(self.)
+#external
+        self.worker.Input.connect(self.TakeInput)
+        # self.worker.finished.connect(self.worker.deleteLater)
+        # self.worker.finished.connect(self.worker.deleteLater)
+
+
+        self.LoadUi()
+        # self.AddToPath()
+        self.LoadToolBarUi()
 
         if parentWidget.appNameText != "New":
             self.appName = parentWidget.appNameText
-            with open(self.Apps + "/" + self.appName + "/" + self.appName + ".json", "r") as read_file:
-                self.data = json.load(read_file)
+            try:
+                with open(self.Apps + "/" + self.appName + "/" + self.appName + ".json", "r") as read_file:
+                    self.data = json.load(read_file)
+            except:
+                message = '''missing configuration file or error in it's format\n
+                         in DIR: opt/Awesome/Apps/<app-name>/<app-name>.json,
+                         visit Empower.com to obtain that config file or you can create you own!
+                         and save it in above DIR and in Standard Format as described on Website!'''
+                logging.error(message)
+                self.terminal.append(message)
         else:
-            self.appName = "New"
+            # self.PrintUserAndHost()
+            #
+            # self.directory.append('/home')
+            # self.directories.UpdateDirectoriesBox(self.directory)
+            self.operation = 'newapp'
+
+            self.message = 'Enter name for your new App:'
+            self.worker.File_Operations_run(self.Operations, self.message)
+
+
 
         self.buttonObject = []
-
         self.hideFlag = 0
-        self.LoadUi()
-        self.AddToPath()
-        self.LoadToolBarUi()
+
+    def CreateNewApp(self, val):
+        self.appName = val
+        if not os.path.isdir(self.Apps + "/" + self.appName):
+            self.directory.append('/home/'+getpass.getuser())
+            self.directories.UpdateDirectoriesBox(self.directory)
+            self.SaveNewApp()
+
+            # self.worker.p.kill()
+            # self.worker.p = None
+        else:
+            self.terminal.append('choose another Name')
+            # self.worker.p.kill()
+            # self.worker.p = None
+            self.worker.File_Operations_run(self.Operations, self.message)
+        # self.BeginProcess(self.operation)
+
+
+    # def BeginProcess(self, operation):
+    #     if self.IP == None:
+    #         self.IP = 'something'
+    #         self.terminal.append('--process begin--')
+    #         if operation == 'newapp':
+    #             self.msg = 'Enter name for your new App:'
+    #         if operation == 'newbutton':
+    #             self.msg = 'Enter name for New Button'
+    #         self.TakeSysInput()
+    #     else:
+    #         self.terminal.append('A process is running, please KILL it first!')
+
+    # def ContinueProcess(self):
+    #     if self.InputValue != '0':
+    #         if self.operation == 'newapp':
+    #             pass
+    #         if self.operation == 'newbutton':
+    #             buttonName = self.InputValue
+    #             if buttonName in self.buttonName:
+    #                 self.terminal.append('Already Exist! Type different name!')
+    #                 self.TakeSysInput()
+    #             else:
+    #                 self.CreateButton(buttonName)
+
+        self.InputValue = '0'
 
     def LoadUi(self):
         self.setAcceptDrops(True)
@@ -56,8 +132,8 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.buttonInterpreter = []
         self.buttonCommand = []
         self.directory = []
+        self.InputValue = '0'
 
-        self.worker = Worker()
 
         self.buttonCount = 0
 
@@ -67,7 +143,7 @@ class LoadAppWidget(QtWidgets.QMainWindow):
     def LoadToolBarUi(self):
 
         self.directories = DirectoriesBox(self)
-        self.AddDirectory = QtWidgets.QToolButton
+        # self.AddDirectory = QtWidgets.QToolButton
 
         self.toolBar = QtWidgets.QToolBar(self.parentWidget.stackedWidget.currentWidget())
         self.toolBar.setStyleSheet("height : 50px;")
@@ -78,30 +154,28 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.toolBar.setLayoutDirection(QtCore.Qt.RightToLeft)
         self.addToolBar(QtCore.Qt.BottomToolBarArea, self.toolBar)
 
-
-
         addLink = QAction(QIcon(self.icons + "/edit"), "Ctrl+B", self)
         addLink.setShortcut("Ctrl+B")
         addLink.triggered.connect(self.AddLink)
 
-        addButton = QAction(QIcon(self.icons + "/newbutton"), "Ctrl+B", self)
-        addButton.setShortcut("Ctrl+B")
+        addButton = QAction(QIcon(self.icons + "/newbutton"), "Alt+B", self)
+        addButton.setShortcut("Alt+B")
         addButton.triggered.connect(self.AddButton)
 
         saveAction = QAction(QIcon(self.icons + "/save"), "Ctrl+S", self)
         saveAction.setShortcut("Ctrl+S")
         saveAction.triggered.connect(self.Save)
 
-        hideAction = QAction(QIcon(self.icons + "/hide"), "Ctrl+H", self)
-        hideAction.setShortcut("Ctrl+S")
+        hideAction = QAction(QIcon(self.icons + "/hide"), "Ctrl+Q", self)
+        hideAction.setShortcut("Alt+Q")
         hideAction.triggered.connect(self.Hide)
 
-        killProcessAction = QAction(QIcon(self.icons + "/kill"), "Ctrl+K", self)
-        killProcessAction.setShortcut("Ctrl+K")
+        killProcessAction = QAction(QIcon(self.icons + "/kill"), "Ctrl+Z", self)
+        killProcessAction.setShortcut("Ctrl+Z")
         killProcessAction.triggered.connect(self.KillProcess)
 
-        clearAction = QAction(QIcon(self.icons + "/clear"), "Ctrl+D", self)
-        clearAction.setShortcut("Ctrl+S")
+        clearAction = QAction(QIcon(self.icons + "/clear"), "Alt+Z", self)
+        clearAction.setShortcut("Alt+Z")
         clearAction.triggered.connect(self.Clear)
 
         terminal = QAction(QIcon(self.icons + "/terminal"), "Alt+.", self)
@@ -166,7 +240,6 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.Save()
 
     def Terminal(self):
-        print('here')
         os.system("gnome-terminal -e 'bash -c \"cd " + self.directories.currentText() + "; exec bash\"'")
 
     def AddLink(self):
@@ -175,33 +248,49 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.addLinkWindow.show()
 
     def AddButton(self):
-        self.terminal.append('Enter new name for Button')
-        self.userInput.setFocus(True)
-        self.userInput.returnPressed.connect(self.CreateButton)
+        if self.worker.p == None:
+            self.message = 'Enter name for New Button'
+            self.operation = 'newbutton'
+            self.worker.File_Operations_run(self.Operations, self.message)
 
-    def CreateButton(self):
-        self.userInput.setFocus(False)
-        self.userInput.disconnect()
-        buttonName = self.userInput.text()
-        self.terminal.append('Added New Button : ' + self.userInput.text())
-        self.userInput.clear()
-        self.buttonName.append(buttonName)
-        self.buttonPosition.append("50,50")
-        self.buttonObject.append(None)
-        self.buttonObject[self.buttonCount] = Button(buttonName, self.parentWidget.stackedWidget.currentWidget())
-        self.buttonObject[self.buttonCount].setMouseTracking(True)
-        self.buttonObject[self.buttonCount].clicked.connect(self.execute)
-        self.buttonInterpreter.append("python3")
-        self.buttonModule.append("Subprocess.py")
-        self.buttonCommand.append("echo hello")
-        self.directory.append("/home/umang")
-        self.buttonCount += 1
-        self.Save()
+    def CreateButton(self, buttonName):
+        # self.userInput.setFocus(False)
+        # self.userInput.disconnect()
+        if buttonName not in self.buttonName:
+            self.buttonName.append(buttonName)
+            self.buttonPosition.append("50,50")
+            self.buttonObject.append(None)
+            self.buttonObject[self.buttonCount] = Button(buttonName, self.parentWidget.stackedWidget.currentWidget())
+            self.buttonObject[self.buttonCount].setMouseTracking(True)
+            self.buttonObject[self.buttonCount].clicked.connect(self.execute)
+            self.terminal.append('Added New Button : ' + self.userInput.text())
+            self.buttonInterpreter.append("python3")
+            self.buttonModule.append("Subprocess.py")
+            self.buttonCommand.append("echo hello")
+            self.buttonCount += 1
+            self.Save()
+            # self.worker.p.kill()
+            # self.worker.p = None
+        else:
+            self.terminal.append('Already exist!')
+            # self.worker.p.kill()
+            # self.worker.p = None
+            self.worker.File_Operations_run(self.Operations, self.message)
+
+
+    # def InternalOps(self):
+    #     if self.worker.p == None:
+    #         # self.worker = Worker()
+    #
+    #         self.WorkerProcess()
+    #     else:
+    #         self.terminal.append('A process is running, please KILL it first!')
+
 
     def execute(self):
 
         if self.worker.p == None:
-            self.worker = Worker()
+            # self.worker = Worker()
             self.source = self.sender().text()
             self.buttonIndex = self.buttonName.index(self.source)
             self.worker.interpreter = self.buttonInterpreter[self.buttonIndex]
@@ -210,20 +299,20 @@ class LoadAppWidget(QtWidgets.QMainWindow):
             self.worker.link = self.directories.currentText()
 
             self.WorkerProcess()
+        else:
+            self.terminal.append('A process is running, please KILL it first!')
 
 
     def WorkerProcess(self):
 
-        self.worker.run()
-        self.worker.PrintOut.connect(self.PrintOutput)
-        self.worker.PrintError.connect(self.PrintError)
-        self.worker.Input.connect(self.TakeInput)
         self.worker.finished.connect(self.PrintUserAndHost)
-        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker.run()
+
 
     def PrintOutput(self, output):
+        self.terminal.setTextColor(QtGui.QColor(0,0,0,255))
 
-        self.terminal.setTextColor(QtGui.QColor(255,255,255,255))
+        # self.terminal.setTextColor(QtGui.QColor(255,255,255,255))
         self.terminal.append(output)
 
     def PrintError(self, output):
@@ -232,26 +321,62 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.terminal.append(output)
 
     def TakeInput(self):
+
         self.userInput.setFocus(True)
         self.userInput.returnPressed.connect(self.read)
 
     def read(self):
         #dissconnect here
+        print('reading input')
+
         self.userInput.returnPressed.disconnect()
         self.InputValue = self.userInput.text()
         self.worker.WriteStdIn(self.InputValue)
         self.userInput.setFocus(False)
         self.userInput.clear()
 
+    # def HandleSysOutput(self, output):
+    #     if output == '':
+    #         self.terminal.append('Invalid Input:',output)
+    #         self.KillProcess()
+    #         self.worker.File_Operations_run(self.Operations, self.message)
+    #     else:
+    #         self.terminal.append('ok')
+
+    def TakeSysInput(self):
+        self.userInput.setFocus(True)
+        self.userInput.returnPressed.connect(self.ReadSysInput)
+
+    def ReadSysInput(self):
+        self.userInput.returnPressed.disconnect()
+        self.InputValue = self.userInput.text()
+        self.worker.WriteStdIn(self.InputValue)
+        if self.InputValue == '':
+            self.terminal.append('!Invalid: input feild is blank.')
+            # self.KillProcess()
+            # self.worker.p.kill()
+            # self.worker.p = None
+            self.worker.File_Operations_run(self.Operations, self.message)
+        else:
+            self.userInput.setFocus(False)
+            self.userInput.clear()
+            self.terminal.append('ok')
+            if self.operation == 'newapp':
+                self.CreateNewApp(self.InputValue)
+            if self.operation == 'newbutton':
+                self.CreateButton(self.InputValue)
+            # self.ContinueProcess()
+
     def KillProcess(self):
 
         if self.worker.p:
             self.terminal.setTextColor(QtGui.QColor(255, 0, 0, 255))
-            self.terminal.append('--killed--')
+            self.terminal.append('--Killed--')
             self.worker.stop()
 
+
     def PrintUserAndHost(self):
-        self.terminal.setTextColor(QtGui.QColor(255,140,0,255))
+        self.terminal.setTextColor(QtGui.QColor(255, 140, 0, 255))
         self.terminal.append(getpass.getuser() + '@' + socket.gethostname() + ' : ' + self.directories.currentText())
 
     def Save(self):
@@ -262,27 +387,44 @@ class LoadAppWidget(QtWidgets.QMainWindow):
             self.newapp.show()
 
         else:
-            with open("Apps/" + self.appName + "/" + self.appName + ".json", "w") as write_file:
-                self.data = {
-                    "appName" : self.appName,
-                    "Configuration" : {
-                        "Buttons" : self.buttonName,
-                        "Positions" : self.buttonPosition,
-                        "Interpreters": self.buttonInterpreter,
-                        "Modules": self.buttonModule,
-                        "Commands": self.buttonCommand,
-                        "Directories": self.directory
+            self.data = {
+                "appName" : self.appName,
+                "Configuration" : {
+                    "Buttons" : self.buttonName,
+                    "Positions" : self.buttonPosition,
+                    "Interpreters": self.buttonInterpreter,
+                    "Modules": self.buttonModule,
+                    "Commands": self.buttonCommand,
+                    "Directories": self.directory
 
-                    }
                 }
-                json.dump(self.data, write_file, indent=5, separators=(',', ': '))
+            }
+
+            # os.environ['SUDO_ASKPASS'] = '/usr/bin/ssh-askpass'
+
+            self.pin = '5454'
+
+            cmd = ['sudo', '-S', 'python3', 'File_Opsave.py', str(self.Apps), str(self.appName), str(self.data)]
+
+            try:
+
+                logging.warning('issue may rise cause of python3 dependency')
+                command = run(cmd, stdout=PIPE, stderr=PIPE, input=self.pin.encode('UTF-8'), cwd=self.Operations)
+
+            except Exception as Argument:
+
+                # creating/opening a file
+                f = open(self.Operations + "/logs.txt", "a")
+
+                # writing in the file
+                f.write(str(Argument))
+
+                # closing the file
+                f.close()
 
     def SaveNewApp(self):
-        self.appName = self.newapp.lineEdit.text()
-        self.newapp.close()
 
-        if not os.path.isdir(self.Apps + "/" + self.appName):
-
+        try:
             path = self.Apps + "/" + self.appName
             os.mkdir(path)
             with open(self.Apps + "/" + self.appName + "/" + self.appName + ".json", "w") as write_file:
@@ -302,8 +444,10 @@ class LoadAppWidget(QtWidgets.QMainWindow):
             os.mkdir(path)
             shutil.copy2(self.icons + "/script.png", path)
             os.rename( path + '/script.png', path + '/' + self.appName +'.png')
-        else:
-            print("Already Exist")
+            self.terminal.append('Success, Created' + self.appName)
+        except:
+            self.terminal.append('Could not Create App!, changes you make here wont be saved')
+
 
     def Hide(self):
         if self.hideFlag == 0:
@@ -319,7 +463,6 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.terminal.clear()
         self.PrintUserAndHost()
 
-
     def dragEnterEvent(self, e):
         e.accept()
         self.buttonObject[UniversalVar.buttonIndex].move(e.pos())
@@ -334,3 +477,4 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.buttonPosition[UniversalVar.buttonIndex] = str(e.posF().x()) + "," + str(e.posF().y())
         e.setDropAction(Qt.MoveAction)
         e.ignore()
+        self.Save()

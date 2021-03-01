@@ -39,6 +39,7 @@ class Button(QtWidgets.QPushButton):
         self.menu.addAction(renameAction)
         self.menu.addAction(propertiesAction)
         self.menu.addSeparator()
+        self.menu.addSeparator()
         self.menu.addAction(removeAction)
 
         self.menu.popup(QtGui.QCursor.pos())
@@ -61,20 +62,34 @@ class Button(QtWidgets.QPushButton):
 
 
     def Rename(self):
+        self.parentWidget.userInput.clear()
+
         self.parentWidget.terminal.append('Enter new name for Button')
         self.parentWidget.userInput.setFocus(True)
         self.parentWidget.userInput.returnPressed.connect(self.RenameButton)
 
     def RenameButton(self):
-        self.parentWidget.userInput.setFocus(False)
+        # this is important dissconnections, otherwise it will create multiple conections
+        # in circular call between Rename and Rename Button
         self.parentWidget.userInput.disconnect()
-        self.parentWidget.buttonName[self.buttonIndex] = self.parentWidget.userInput.text()
-        self.parentWidget.buttonObject[self.buttonIndex].setText(self.parentWidget.userInput.text())
-        self.parentWidget.terminal.append('Button Renamed to : ' + self.parentWidget.userInput.text())
-        self.parentWidget.userInput.clear()
+        newname = self.parentWidget.userInput.text()
 
-        self.parentWidget.Save()
+        if newname != '':
 
+            if newname not in self.parentWidget.buttonName:
+
+                self.parentWidget.userInput.setFocus(False)
+                self.parentWidget.buttonName[self.buttonIndex] = self.parentWidget.userInput.text()
+                self.parentWidget.buttonObject[self.buttonIndex].setText(self.parentWidget.userInput.text())
+                self.parentWidget.terminal.append('Button Renamed to : ' + self.parentWidget.userInput.text())
+                self.parentWidget.Save()
+
+            else:
+                self.parentWidget.terminal.append('button already exist')
+                self.Rename()
+        else:
+            self.parentWidget.terminal.append('button name cannot be blank!')
+            self.Rename()
 
     def Properties(self):
 
@@ -99,9 +114,7 @@ class Button(QtWidgets.QPushButton):
         drag.setMimeData(mimeData)
         drag.setHotSpot(e.pos() - self.rect().center())
 
-        dropAction = drag.exec_(Qt.MoveAction)
-
-
+        drag.exec_(Qt.MoveAction)
 
     def mouseDoubleClickEvent(self, e):
         if e.button != Qt.RightButton:
