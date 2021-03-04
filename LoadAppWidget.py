@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from Button import Button
-from MiniWindow import Ui_MiniWindow
+# from MyAppsWindow import MyAppsWindow
 from PyQt5.QtCore import Qt
 import json, logging
 import getpass, socket
@@ -8,12 +8,13 @@ from PyQt5.QtWidgets import QAction
 from PyQt5.QtGui import QIcon
 from DirectoriesBox import DirectoriesBox
 import UniversalVar
-from TextEdit import TextEdit, PrimitiveTerminalWidget
+from TextEdit import PrimitiveTerminalWidget
 import shutil, locale, os
 from Process import Worker
 import os, time
 from subprocess import run, PIPE
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
+from DirectoryWindow import DirectoryWindow
 
 class LoadAppWidget(QtWidgets.QMainWindow):
     # Load from JSON file
@@ -37,6 +38,7 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.InternalWorker()
         self.Eworker = Worker()
         self.ExternalWorker()
+
         self.Retry = False
         self.codec = locale.getpreferredencoding()
 
@@ -61,9 +63,9 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         DEFAULT_ROWS = 25
 
         # NOTE: You can use any QColor instance, not just the predefined ones.
-        DEFAULT_TTY_FONT = QtGui.QFont('Noto', 16)
-        DEFAULT_TTY_FG = Qt.lightGray
-        DEFAULT_TTY_BG = Qt.black
+        # DEFAULT_TTY_FONT = QtGui.QFont('Noto', 16)
+        # DEFAULT_TTY_FG = Qt.lightGray
+        # DEFAULT_TTY_BG = Qt.black
 
         # The character to use as a reference point when converting between pixel and
         # character cell dimensions in the presence of a non-fixed-width font
@@ -71,14 +73,13 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.terminal = PrimitiveTerminalWidget(self)
 
         # Cheap hack to estimate what 80x25 should be in pixels and resize to it
-        fontMetrics = self.terminal.fontMetrics()
+        # fontMetrics = self.terminal.fontMetrics()
         # target_width = (fontMetrics.boundingRect(
         #     REFERENCE_CHAR * DEFAULT_COLS
         # ).width() + app.style().pixelMetric(QtWidgets.QStyle.PM_ScrollBarExtent))
         # self.terminal.resize(target_width, fontMetrics.height() * DEFAULT_ROWS)
 
         # Launch DEFAULT_TTY_CMD in the terminal
-        # self.terminal.spawn(DEFAULT_TTY_CMD)
 
 
 ###########3
@@ -97,7 +98,7 @@ class LoadAppWidget(QtWidgets.QMainWindow):
 
     def LoadToolBarUi(self):
 
-        self.directories = DirectoriesBox(self)
+        self.directoriesBox = DirectoriesBox(self)
         self.toolBar = QtWidgets.QToolBar(self.parentWidget.stackedWidget.currentWidget())
         self.toolBar.setStyleSheet("height : 50px;")
         self.toolBar.setObjectName("toolBar")
@@ -139,7 +140,7 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         # self.userInput.setClearButtonEnabled(True)
 
         self.toolBar.addAction(addLink)
-        self.toolBar.addWidget(self.directories)
+        self.toolBar.addWidget(self.directoriesBox)
         self.toolBar.addAction(addButton)
         self.toolBar.addAction(saveAction)
         self.toolBar.addAction(hideAction)
@@ -169,15 +170,7 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         # self.Iworker.finished.connect(self.PrintUserAndHost)
         # self.worker.finished.connect(self.worker.deleteLater)
 
-    def CreateNewApp(self, val):
-        self.appName = val
-        if not os.path.isdir(self.Apps + "/" + self.appName):
-            self.directoryList.append('/home/'+getpass.getuser())
-            self.directories.UpdateDirectoriesBox(self.directoryList)
-            self.SaveNewApp()
-        else:
-            self.terminal.append('>> Already Exist! TYpe Different Name')
-            self.Retry =True
+
 
     def LoadJsonData(self):
         try:
@@ -228,7 +221,11 @@ class LoadAppWidget(QtWidgets.QMainWindow):
             self.buttonObject[self.buttonCount].move(float(self.location[0]),float(self.location[1]))
             self.buttonCount += 1
         #Directories
-        self.directories.UpdateDirectoriesBox(self.directoryList)
+        DEFAULT_TTY_CMD = ['/bin/bash']
+        self.terminal.spawn(DEFAULT_TTY_CMD)
+        self.terminal.clear()
+        self.directoriesBox.UpdateDirectoriesBox(self.directoryList)
+
 
     def NewApp(self):
 
@@ -239,15 +236,14 @@ class LoadAppWidget(QtWidgets.QMainWindow):
     ## triger based
 
     def UpdateDirectories(self):
-        self.directories.UpdateDirectoriesBox(self.directoryList)
+        self.directoriesBox.UpdateDirectoriesBox(self.directoryList)
         self.Save()
 
     def Terminal(self):
-        os.system("gnome-terminal -e 'bash -c \"cd " + self.directories.currentText() + "; exec bash\"'")
+        os.system("gnome-terminal -e 'bash -c \"cd " + self.directoriesBox.currentText() + "; exec bash\"'")
 
     def AddLink(self):
-        self.addLinkWindow = Ui_MiniWindow(self)
-        self.addLinkWindow.DirecotriesSetup()
+        self.addLinkWindow = DirectoryWindow(self)
         self.addLinkWindow.show()
 
     def AddButton(self):
@@ -284,20 +280,20 @@ class LoadAppWidget(QtWidgets.QMainWindow):
             self.Eworker.interpreter = self.buttonInterpreter[self.buttonIndex]
             self.Eworker.moduleName = self.buttonModule[self.buttonIndex]
             self.Eworker.command = self.buttonCommand[self.buttonIndex]
-            self.Eworker.link = self.directories.currentText()
+            self.Eworker.link = self.directoriesBox.currentText()
 
             self.Eworker.run()
         else:
             self.terminal.append('A process is running, please KILL it first!')
 
     def PrintOutput(self, output):
-        self.terminal.setTextColor(QtGui.QColor(0,0,0,255))
+        # self.terminal.setTextColor(QtGui.QColor(0,0,0,255))
         # self.terminal.setTextColor(QtGui.QColor(255,255,255,255))
         self.terminal.append(output)
 
     def PrintError(self, output):
 
-        self.terminal.setTextColor(QtGui.QColor(255,192,203,255))
+        # self.terminal.setTextColor(QtGui.QColor(255,192,203,255))
         self.terminal.append(output)
 
     def TakeInput(self):
@@ -342,19 +338,19 @@ class LoadAppWidget(QtWidgets.QMainWindow):
     def KillProcess(self):
 
         if self.Iworker.p:
-            self.terminal.setTextColor(QtGui.QColor(255, 0, 0, 255))
+            # self.terminal.setTextColor(QtGui.QColor(255, 0, 0, 255))
             self.terminal.append('--Killed--')
             self.Iworker.stop()
 
         if self.Eworker.p:
-            self.terminal.setTextColor(QtGui.QColor(255, 0, 0, 255))
+            # self.terminal.setTextColor(QtGui.QColor(255, 0, 0, 255))
             self.terminal.append('--Killed--')
             self.Eworker.stop()
 
 
-    def PrintUserAndHost(self):
-        self.terminal.setTextColor(QtGui.QColor(255, 140, 0, 255))
-        self.terminal.append(getpass.getuser() + '@' + socket.gethostname() + ' : ' + self.directories.currentText())
+    # def PrintUserAndHost(self):
+    #     self.terminal.setTextColor(QtGui.QColor(255, 140, 0, 255))
+        # self.terminal.append(getpass.getuser() + '@' + socket.gethostname() + ' : ' + self.directoriesBox.currentText())
 
     def Save(self):
         if self.parentWidget.openAppsObjects[self.parentWidget.stackedWidget.currentIndex()].appName == "New":
@@ -396,57 +392,6 @@ class LoadAppWidget(QtWidgets.QMainWindow):
                 # closing the file
                 f.close()
 
-    def SaveNewApp(self):
-
-        try:
-
-        # with open(self.Apps + "/" + self.appName + "/" + self.appName + ".json", "w") as write_file:
-            self.data = {
-                "appName" : self.appName,
-                "Configuration" : {
-                    "Buttons" : self.buttonName,
-                    "Positions" : self.buttonPosition,
-                    "Interpreters": self.buttonInterpreter,
-                    "Modules": self.buttonModule,
-                    "Commands": self.buttonCommand,
-                    "Directories": self.directoryList
-                }
-            }
-                # json.dump(self.data, write_file, indent=5, separators=(',', ': '))
-            self.pin = '5454'
-            mkdir = ['sudo', '-S', 'mkdir', self.appName]
-            mkdirIcon = ['sudo', '-S', 'mkdir', 'icon']
-            print(self.icons)
-            copy_rename_icon = ['sudo', '-S', 'cp', self.icons + '/script.png', self.Apps + '/' + self.appName + '/icon/'+ self.appName + '.png']
-            print(copy_rename_icon)
-            cmd = ['sudo', '-S', 'python3', 'File_Opsave.py', str(self.Apps), str(self.appName), str(self.data)]
-            try:
-
-                logging.warning('issue may rise cause of python3 dependency')
-                command = run(mkdir, stdout=PIPE, stderr=PIPE, input=self.pin.encode('UTF-8'), cwd=self.Apps)
-                command = run(mkdirIcon, stdout=PIPE, stderr=PIPE, input=self.pin.encode('UTF-8'), cwd=self.Apps +'/'+ self.appName)
-                command = run(copy_rename_icon, stdout=PIPE, stderr=PIPE, input=self.pin.encode('UTF-8'), cwd=self.Apps +'/'+ self.appName)
-                if len(command.stdout.decode('UTF-8')) == 0:
-                    print(command.stderr.decode('UTF-8'))
-                else:
-                    print(command.stdout.decode('UTF-8'))
-
-                command = run(cmd, stdout=PIPE, stderr=PIPE, input=self.pin.encode('UTF-8'), cwd=self.Operations)
-
-            except Exception as Argument:
-
-                # creating/opening a file
-                f = open(self.Operations + "/logs.txt", "a")
-
-                # writing in the file
-                f.write(str(Argument))
-
-                # closing the file
-                f.close()
-
-            self.terminal.append('>> Created App: ' + self.appName)
-        except:
-            self.terminal.append('>> Could not Create App!, changes you make here won\'t be saved')
 
 
     def Hide(self):

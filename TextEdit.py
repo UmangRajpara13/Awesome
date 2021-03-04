@@ -1,11 +1,3 @@
-from PyQt5.QtWidgets import QTextEdit
-
-class TextEdit(QTextEdit):
-    def __init__(self):
-        super().__init__()
-        self.setObjectName("terminal")
-        self.setReadOnly(True)
-
 """Primitive terminal emulator example made from a PyQt QTextEdit widget."""
 
 import fcntl, locale, os, pty, struct, sys, termios
@@ -15,7 +7,7 @@ import subprocess  # nosec
 try:
     # pylint: disable=no-name-in-module
     from PyQt5.QtCore import Qt, QSocketNotifier                 # type: ignore
-    from PyQt5.QtGui import QFont, QPalette, QTextCursor         # type: ignore
+    from PyQt5.QtGui import QFont, QPalette, QTextCursor, QColor         # type: ignore
     from PyQt5.QtWidgets import QApplication, QStyle, QTextEdit, QFrame  # type: ignore
 except ImportError:
     raise
@@ -27,9 +19,9 @@ DEFAULT_COLS = 80
 DEFAULT_ROWS = 25
 
 # NOTE: You can use any QColor instance, not just the predefined ones.
-DEFAULT_TTY_FONT = QFont('Noto', 14)
-DEFAULT_TTY_FG = Qt.lightGray
-DEFAULT_TTY_BG = Qt.black
+# DEFAULT_TTY_FONT = QFont('Noto', 14)
+# DEFAULT_TTY_FG = Qt.lightGray
+# DEFAULT_TTY_BG = Qt.black
 
 # The character to use as a reference point when converting between pixel and
 # character cell dimensions in the presence of a non-fixed-width font
@@ -54,17 +46,17 @@ class PrimitiveTerminalWidget(QTextEdit):
 
     def __init__(self, *args, **kwargs):
         super(PrimitiveTerminalWidget, self).__init__(*args, *kwargs)
-
+        # self.setTextBackgroundColor(QColor(255,255,255,255))
         # Do due diligence to figure out what character coding child
         # applications will expect to speak
         self.codec = locale.getpreferredencoding()
-        self.setFrameShape(QFrame.NoFrame)
+        # self.setFrameShape(QFrame.NoFrame)
         # Customize the look and feel
-        pal = self.palette()
-        pal.setColor(QPalette.Base, DEFAULT_TTY_BG)
-        pal.setColor(QPalette.Text, DEFAULT_TTY_FG)
-        self.setPalette(pal)
-        self.setFont(DEFAULT_TTY_FONT)
+        # pal = self.palette()
+        # pal.setColor(QPalette.Base, DEFAULT_TTY_BG)
+        # pal.setColor(QPalette.Text, DEFAULT_TTY_FG)
+        # self.setPalette(pal)
+        # self.setFont(DEFAULT_TTY_FONT)
 
         # Disable the widget's built-in editing support rather than looking
         # into how to constrain it. (Quick hack which means we have to provide
@@ -151,8 +143,8 @@ class PrimitiveTerminalWidget(QTextEdit):
         rows = win_size_px.height() // fontMetrics.height()
 
         # Announce the change to the PTY
-        fcntl.ioctl(self.pty_m, termios.TIOCSWINSZ,
-            struct.pack("HHHH", rows, cols, 0, 0))
+        # fcntl.ioctl(self.pty_m, termios.TIOCSWINSZ,
+        #     struct.pack("HHHH", rows, cols, 0, 0))
 
         # As a quick hack, scroll to the bottom on resize
         # (The proper solution would be to preserve scroll position no matter
@@ -195,7 +187,7 @@ class PrimitiveTerminalWidget(QTextEdit):
         subprocess.Popen(argv,  # nosec
             stdin=pty_s, stdout=pty_s, stderr=pty_s,
             env=child_env,
-            preexec_fn=os.setsid)
+            preexec_fn=os.setsid, cwd='/home/umang/Desktop')
 
         # Close the child side of the PTY so that we can detect when to exit
         os.close(pty_s)

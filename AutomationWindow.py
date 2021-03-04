@@ -1,14 +1,14 @@
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtWidgets import QAction
 from PyQt5.QtGui import QIcon
-from AppsList import AppBar
+from AppBar import AppBar
 from LoadAppWidget import LoadAppWidget
-from MiniWindow import Ui_MiniWindow
+from MyAppsWindow import MyAppsWindow
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 import UniversalVar
 from Settings import Settings
 
-class Ui_AutomationWindow(QtWidgets.QMainWindow):
+class AutomationWindow(QtWidgets.QMainWindow):
     def setupUi(self):
 
         #Developer defined
@@ -23,15 +23,15 @@ class Ui_AutomationWindow(QtWidgets.QMainWindow):
         UniversalVar.height = self.desktop.height()
         #reimplemented
         self.resize(700, 500)
-        self.setObjectName("Awesome")
+        self.setObjectName("AutomationWindow")
 
         # this is master style sheet affecting all child widgets
-        # self.setStyleSheet("background-color: #466460;\n"
-        #                    "color: #FFFFFF;\n"
-        #                     "font-family: Courier;")
-#         self.setStyleSheet("background-color: #59360a;\n"
-#                            "color: #000000;\n"
-#                            "font-family: Courier;")
+        self.setStyleSheet("background-color: #466460;\n"
+                           "color: #FFFFFF;\n"
+                            "font-family: Courier;")
+        # self.setStyleSheet("background-color: #59360a;\n"
+        #                    "color: #000000;\n"
+        #                    "font-family: Courier;")
 #         self.setWindowOpacity(0.8)
 
 
@@ -100,11 +100,10 @@ class Ui_AutomationWindow(QtWidgets.QMainWindow):
     ###trigger based
 
     def Open(self):
-            self.home = Ui_MiniWindow(self)
+            self.home = MyAppsWindow()
             self.home.LoadHomeApps()
             self.home.appList.itemDoubleClicked.connect(self.openApp)
             self.home.appList.itemPressed.connect(self.getItemName)
-            self.home.New.clicked.connect(self.OpenNewApp)
             self.home.move(0, UniversalVar.height*0.425)
             self.home.show()
 
