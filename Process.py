@@ -4,7 +4,6 @@ from PyQt5.QtCore import QObject, pyqtSignal, QProcess
 
 class Worker(QObject):
     finished = pyqtSignal()
-    # started = pyqtSignal()
     Input = pyqtSignal()
     PrintOut = pyqtSignal(str)
     PrintError = pyqtSignal(str)
@@ -18,11 +17,13 @@ class Worker(QObject):
 
     def run(self):
         if not self.p:
-            # self.started.emit()
+
             self.p = QProcess()
+            # print('operating', self.p)
+
             self.p.readyReadStandardOutput.connect(self.handle_stdout)
             self.p.readyReadStandardError.connect(self.handle_stderr)
-            self.p.stateChanged.connect(self.handle_state)
+            # self.p.stateChanged.connect(self.handle_state)
             self.p.finished.connect(self.process_finished)
             if self.interpreter.find('python') != -1:
                 self.p.setWorkingDirectory(self.Module)
@@ -47,9 +48,10 @@ class Worker(QObject):
             self.Input.emit()
 
     def process_finished(self):
-        self.finished.emit()
-        print('finished')
         self.p = None
+        self.finished.emit()
+        # print('finishing up',self.p)
+
 
     def handle_state(self, state):
         states = {
@@ -67,21 +69,30 @@ class Worker(QObject):
 
 
     def stop(self):
-
-        self.p.kill()
-        # self.finished.emit()
-        self.p = None
+        if self.p:
+            self.p.kill()
+        # self.p = None
 
     def File_Operations_run(self, operations, msg):
         if not self.p:
-            print('process running')
-
             self.p = QProcess()
-            self.p.readyReadStandardOutput.connect(self.handle_stdout)
+
+            self.p.readyReadStandardOutput.connect(self.handle_sys_stdout)
             self.p.readyReadStandardError.connect(self.handle_stderr)
-            self.p.stateChanged.connect(self.handle_state)
+            # self.p.stateChanged.connect(self.handle_state)
             self.p.finished.connect(self.process_finished)
-
             self.p.setWorkingDirectory(operations)
-
             self.p.start('python3', ['File_Operations.py', msg])
+
+    def handle_sys_stdout(self):
+
+        data = self.p.readAllStandardOutput()
+        stdout = bytes(data).decode("utf8")
+        self.PrintOut.emit(stdout)
+        if stdout.find('->') != -1:
+            self.takeSysInput.emit()
+
+    def Sys_WriteStdIn(self, stdinput):
+        stdinput = stdinput + '\n'
+        stdinput = bytes(stdinput.encode('UTF-8'))
+        self.p.write(stdinput)

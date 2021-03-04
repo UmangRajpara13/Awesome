@@ -8,10 +8,10 @@ from PyQt5.QtWidgets import QAction
 from PyQt5.QtGui import QIcon
 from DirectoriesBox import DirectoriesBox
 import UniversalVar
-from TextEdit import TextEdit
-import shutil
+from TextEdit import TextEdit, PrimitiveTerminalWidget
+import shutil, locale, os
 from Process import Worker
-import os
+import os, time
 from subprocess import run, PIPE
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 
@@ -20,121 +20,76 @@ class LoadAppWidget(QtWidgets.QMainWindow):
     def __init__(self, parentWidget):
         super().__init__()
         self.parentWidget = parentWidget
+        self.centralwidget_2 = QtWidgets.QWidget(self)
+
+        self.centralwidget_2.setObjectName("centralwidget")
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.centralwidget_2)
+        self.verticalLayout_2.setObjectName("verticalLayout")
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.setCentralWidget(self.centralwidget_2)
+
+
         self.appctxt = ApplicationContext()  # 1. Instantiate ApplicationContext
         self.Apps = self.appctxt.get_resource('Apps')
         self.icons = self.appctxt.get_resource('icons')
         self.Operations = self.appctxt.get_resource('operations')
-
-        self.worker = Worker()
-        self.worker.PrintOut.connect(self.PrintOutput)
-        self.worker.PrintError.connect(self.PrintError)
-
-#internal
-        # self.worker.PrintOut.connect(self.HandleSysOutput)
-        self.worker.Input.connect(self.TakeSysInput)
-        # self.worker.finished.connect(self.)
-#external
-        self.worker.Input.connect(self.TakeInput)
-        # self.worker.finished.connect(self.worker.deleteLater)
-        # self.worker.finished.connect(self.worker.deleteLater)
-
+        self.Iworker = Worker()
+        self.InternalWorker()
+        self.Eworker = Worker()
+        self.ExternalWorker()
+        self.Retry = False
+        self.codec = locale.getpreferredencoding()
 
         self.LoadUi()
-        # self.AddToPath()
         self.LoadToolBarUi()
-
-        if parentWidget.appNameText != "New":
-            self.appName = parentWidget.appNameText
-            try:
-                with open(self.Apps + "/" + self.appName + "/" + self.appName + ".json", "r") as read_file:
-                    self.data = json.load(read_file)
-            except:
-                message = '''missing configuration file or error in it's format\n
-                         in DIR: opt/Awesome/Apps/<app-name>/<app-name>.json,
-                         visit Empower.com to obtain that config file or you can create you own!
-                         and save it in above DIR and in Standard Format as described on Website!'''
-                logging.error(message)
-                self.terminal.append(message)
-        else:
-            # self.PrintUserAndHost()
-            #
-            # self.directory.append('/home')
-            # self.directories.UpdateDirectoriesBox(self.directory)
-            self.operation = 'newapp'
-
-            self.message = 'Enter name for your new App:'
-            self.worker.File_Operations_run(self.Operations, self.message)
-
-
 
         self.buttonObject = []
         self.hideFlag = 0
 
-    def CreateNewApp(self, val):
-        self.appName = val
-        if not os.path.isdir(self.Apps + "/" + self.appName):
-            self.directory.append('/home/'+getpass.getuser())
-            self.directories.UpdateDirectoriesBox(self.directory)
-            self.SaveNewApp()
-
-            # self.worker.p.kill()
-            # self.worker.p = None
-        else:
-            self.terminal.append('choose another Name')
-            # self.worker.p.kill()
-            # self.worker.p = None
-            self.worker.File_Operations_run(self.Operations, self.message)
-        # self.BeginProcess(self.operation)
-
-
-    # def BeginProcess(self, operation):
-    #     if self.IP == None:
-    #         self.IP = 'something'
-    #         self.terminal.append('--process begin--')
-    #         if operation == 'newapp':
-    #             self.msg = 'Enter name for your new App:'
-    #         if operation == 'newbutton':
-    #             self.msg = 'Enter name for New Button'
-    #         self.TakeSysInput()
-    #     else:
-    #         self.terminal.append('A process is running, please KILL it first!')
-
-    # def ContinueProcess(self):
-    #     if self.InputValue != '0':
-    #         if self.operation == 'newapp':
-    #             pass
-    #         if self.operation == 'newbutton':
-    #             buttonName = self.InputValue
-    #             if buttonName in self.buttonName:
-    #                 self.terminal.append('Already Exist! Type different name!')
-    #                 self.TakeSysInput()
-    #             else:
-    #                 self.CreateButton(buttonName)
-
-        self.InputValue = '0'
+        # self.AddToPath()
+        # self.InitializeWorker()
 
     def LoadUi(self):
         self.setAcceptDrops(True)
-        self.dockWidget = QtWidgets.QDockWidget(self)
-        self.dockWidget.setObjectName("dockWidget")
-        self.dockWidget.setFeatures(QtWidgets.QDockWidget.DockWidgetFloatable)
-        self.dockWidgetContents = QtWidgets.QWidget()
-        self.dockWidgetContents.setObjectName("dockWidgetContents")
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.dockWidgetContents)
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.terminal = TextEdit()
+###############
+        # self.terminal = TextEdit()
+
+        # It's good practice to put these sorts of things in constants at the top
+        # rather than embedding them in your code
+        DEFAULT_TTY_CMD = ['/bin/bash']
+        DEFAULT_COLS = 80
+        DEFAULT_ROWS = 25
+
+        # NOTE: You can use any QColor instance, not just the predefined ones.
+        DEFAULT_TTY_FONT = QtGui.QFont('Noto', 16)
+        DEFAULT_TTY_FG = Qt.lightGray
+        DEFAULT_TTY_BG = Qt.black
+
+        # The character to use as a reference point when converting between pixel and
+        # character cell dimensions in the presence of a non-fixed-width font
+        REFERENCE_CHAR = 'W'
+        self.terminal = PrimitiveTerminalWidget(self)
+
+        # Cheap hack to estimate what 80x25 should be in pixels and resize to it
+        fontMetrics = self.terminal.fontMetrics()
+        # target_width = (fontMetrics.boundingRect(
+        #     REFERENCE_CHAR * DEFAULT_COLS
+        # ).width() + app.style().pixelMetric(QtWidgets.QStyle.PM_ScrollBarExtent))
+        # self.terminal.resize(target_width, fontMetrics.height() * DEFAULT_ROWS)
+
+        # Launch DEFAULT_TTY_CMD in the terminal
+        # self.terminal.spawn(DEFAULT_TTY_CMD)
+
+
+###########3
         self.verticalLayout_2.addWidget(self.terminal)
-        self.dockWidget.setWidget(self.dockWidgetContents)
-        self.addDockWidget(QtCore.Qt.DockWidgetArea(1), self.dockWidget)
+
         self.buttonName = []
         self.buttonPosition = []
         self.buttonModule = []
         self.buttonInterpreter = []
         self.buttonCommand = []
-        self.directory = []
-        self.InputValue = '0'
-
-
+        self.directoryList = []
         self.buttonCount = 0
 
     def AddToPath(self):
@@ -143,8 +98,6 @@ class LoadAppWidget(QtWidgets.QMainWindow):
     def LoadToolBarUi(self):
 
         self.directories = DirectoriesBox(self)
-        # self.AddDirectory = QtWidgets.QToolButton
-
         self.toolBar = QtWidgets.QToolBar(self.parentWidget.stackedWidget.currentWidget())
         self.toolBar.setStyleSheet("height : 50px;")
         self.toolBar.setObjectName("toolBar")
@@ -182,8 +135,8 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         terminal.setShortcut("Alt+.")
         terminal.triggered.connect(self.Terminal)
 
-        self.userInput = QtWidgets.QLineEdit()
-        self.userInput.setClearButtonEnabled(True)
+        # self.userInput = QtWidgets.QLineEdit()
+        # self.userInput.setClearButtonEnabled(True)
 
         self.toolBar.addAction(addLink)
         self.toolBar.addWidget(self.directories)
@@ -192,10 +145,53 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.toolBar.addAction(hideAction)
         self.toolBar.addAction(clearAction)
         self.toolBar.addAction(killProcessAction)
-        self.toolBar.addWidget(self.userInput)
+        # self.toolBar.addWidget(self.userInput)
         self.toolBar.addAction(terminal)
 
+    def ExternalWorker(self):
+        # self.worker = Worker()
+        self.Eworker.PrintOut.connect(self.PrintOutput)
+        self.Eworker.PrintError.connect(self.PrintError)
+        # external
+        self.Eworker.Input.connect(self.TakeInput)
+        # self.Eworker.finished.connect(self.PrintUserAndHost)
 
+    def InternalWorker(self):
+        # self.worker = Worker()
+
+        self.Iworker.PrintOut.connect(self.PrintOutput)
+        self.Iworker.PrintError.connect(self.PrintError)
+        # internal
+        self.Iworker.takeSysInput.connect(self.TakeSysInput)
+        # external
+        self.Iworker.finished.connect(self.CheckForRetry)
+
+        # self.Iworker.finished.connect(self.PrintUserAndHost)
+        # self.worker.finished.connect(self.worker.deleteLater)
+
+    def CreateNewApp(self, val):
+        self.appName = val
+        if not os.path.isdir(self.Apps + "/" + self.appName):
+            self.directoryList.append('/home/'+getpass.getuser())
+            self.directories.UpdateDirectoriesBox(self.directoryList)
+            self.SaveNewApp()
+        else:
+            self.terminal.append('>> Already Exist! TYpe Different Name')
+            self.Retry =True
+
+    def LoadJsonData(self):
+        try:
+
+            with open(self.Apps + "/" + self.appName + "/" + self.appName + ".json", "r") as read_file:
+                self.data = json.load(read_file)
+                print('loaded')
+        except:
+            message = '''missing configuration file or error in it's format\n
+                     in DIR: opt/Awesome/Apps/<app-name>/<app-name>.json,
+                     visit Empower.com to obtain that config file or you can create you own!
+                     and save it in above DIR and in Standard Format as described on Website!'''
+            logging.error(message)
+            self.terminal.append(message)
 
     def DeSerializeJson(self, data):
 
@@ -217,10 +213,11 @@ class LoadAppWidget(QtWidgets.QMainWindow):
                 if element == "Commands":
                     self.buttonCommand = data[element]
                 if element == "Directories":
-                    self.directory = data[element]
-
+                    self.directoryList = data[element]
 
     def CreateAttributes(self):
+
+
         #Buttons
         for i in range(len(self.buttonName)):
             self.buttonObject.append(None)
@@ -231,12 +228,18 @@ class LoadAppWidget(QtWidgets.QMainWindow):
             self.buttonObject[self.buttonCount].move(float(self.location[0]),float(self.location[1]))
             self.buttonCount += 1
         #Directories
-        self.directories.UpdateDirectoriesBox(self.directory)
+        self.directories.UpdateDirectoriesBox(self.directoryList)
 
-## triger based
+    def NewApp(self):
+
+        self.operation = 'newapp'
+        self.message = 'Enter name for your new App:'
+        self.Iworker.File_Operations_run(self.Operations, self.message)
+
+    ## triger based
 
     def UpdateDirectories(self):
-        self.directories.UpdateDirectoriesBox(self.directory)
+        self.directories.UpdateDirectoriesBox(self.directoryList)
         self.Save()
 
     def Terminal(self):
@@ -248,14 +251,13 @@ class LoadAppWidget(QtWidgets.QMainWindow):
         self.addLinkWindow.show()
 
     def AddButton(self):
-        if self.worker.p == None:
-            self.message = 'Enter name for New Button'
-            self.operation = 'newbutton'
-            self.worker.File_Operations_run(self.Operations, self.message)
+        # if self.Iworker.p == None:
+        self.message = '>> Enter name for New Button'
+        self.operation = 'newbutton'
+        self.Iworker.File_Operations_run(self.Operations, self.message)
 
     def CreateButton(self, buttonName):
-        # self.userInput.setFocus(False)
-        # self.userInput.disconnect()
+
         if buttonName not in self.buttonName:
             self.buttonName.append(buttonName)
             self.buttonPosition.append("50,50")
@@ -269,49 +271,27 @@ class LoadAppWidget(QtWidgets.QMainWindow):
             self.buttonCommand.append("echo hello")
             self.buttonCount += 1
             self.Save()
-            # self.worker.p.kill()
-            # self.worker.p = None
+
         else:
-            self.terminal.append('Already exist!')
-            # self.worker.p.kill()
-            # self.worker.p = None
-            self.worker.File_Operations_run(self.Operations, self.message)
-
-
-    # def InternalOps(self):
-    #     if self.worker.p == None:
-    #         # self.worker = Worker()
-    #
-    #         self.WorkerProcess()
-    #     else:
-    #         self.terminal.append('A process is running, please KILL it first!')
-
+            self.terminal.append('>> Already exist! Type Different Name')
+            self.Retry = True
 
     def execute(self):
 
-        if self.worker.p == None:
-            # self.worker = Worker()
+        if self.Eworker.p == None:
             self.source = self.sender().text()
             self.buttonIndex = self.buttonName.index(self.source)
-            self.worker.interpreter = self.buttonInterpreter[self.buttonIndex]
-            self.worker.moduleName = self.buttonModule[self.buttonIndex]
-            self.worker.command = self.buttonCommand[self.buttonIndex]
-            self.worker.link = self.directories.currentText()
+            self.Eworker.interpreter = self.buttonInterpreter[self.buttonIndex]
+            self.Eworker.moduleName = self.buttonModule[self.buttonIndex]
+            self.Eworker.command = self.buttonCommand[self.buttonIndex]
+            self.Eworker.link = self.directories.currentText()
 
-            self.WorkerProcess()
+            self.Eworker.run()
         else:
             self.terminal.append('A process is running, please KILL it first!')
 
-
-    def WorkerProcess(self):
-
-        self.worker.finished.connect(self.PrintUserAndHost)
-        self.worker.run()
-
-
     def PrintOutput(self, output):
         self.terminal.setTextColor(QtGui.QColor(0,0,0,255))
-
         # self.terminal.setTextColor(QtGui.QColor(255,255,255,255))
         self.terminal.append(output)
 
@@ -323,25 +303,15 @@ class LoadAppWidget(QtWidgets.QMainWindow):
     def TakeInput(self):
 
         self.userInput.setFocus(True)
-        self.userInput.returnPressed.connect(self.read)
+        self.userInput.returnPressed.connect(self.Read)
 
-    def read(self):
+    def Read(self):
         #dissconnect here
-        print('reading input')
-
         self.userInput.returnPressed.disconnect()
         self.InputValue = self.userInput.text()
-        self.worker.WriteStdIn(self.InputValue)
+        self.Eworker.WriteStdIn(self.InputValue)
         self.userInput.setFocus(False)
         self.userInput.clear()
-
-    # def HandleSysOutput(self, output):
-    #     if output == '':
-    #         self.terminal.append('Invalid Input:',output)
-    #         self.KillProcess()
-    #         self.worker.File_Operations_run(self.Operations, self.message)
-    #     else:
-    #         self.terminal.append('ok')
 
     def TakeSysInput(self):
         self.userInput.setFocus(True)
@@ -350,29 +320,36 @@ class LoadAppWidget(QtWidgets.QMainWindow):
     def ReadSysInput(self):
         self.userInput.returnPressed.disconnect()
         self.InputValue = self.userInput.text()
-        self.worker.WriteStdIn(self.InputValue)
+        self.Iworker.Sys_WriteStdIn(self.InputValue)
         if self.InputValue == '':
-            self.terminal.append('!Invalid: input feild is blank.')
-            # self.KillProcess()
-            # self.worker.p.kill()
-            # self.worker.p = None
-            self.worker.File_Operations_run(self.Operations, self.message)
+            self.terminal.append('>> !Invalid: input feild is blank.')
+            self.Retry = True
         else:
+            self.terminal.append('<<< ' + self.InputValue)
             self.userInput.setFocus(False)
             self.userInput.clear()
-            self.terminal.append('ok')
             if self.operation == 'newapp':
                 self.CreateNewApp(self.InputValue)
             if self.operation == 'newbutton':
                 self.CreateButton(self.InputValue)
-            # self.ContinueProcess()
+
+    def CheckForRetry(self):
+        if self.Retry:
+            # print('Iworker p:', self.Iworker.p)
+            self.Iworker.File_Operations_run(self.Operations, self.message)
+            self.Retry = False
 
     def KillProcess(self):
 
-        if self.worker.p:
+        if self.Iworker.p:
             self.terminal.setTextColor(QtGui.QColor(255, 0, 0, 255))
             self.terminal.append('--Killed--')
-            self.worker.stop()
+            self.Iworker.stop()
+
+        if self.Eworker.p:
+            self.terminal.setTextColor(QtGui.QColor(255, 0, 0, 255))
+            self.terminal.append('--Killed--')
+            self.Eworker.stop()
 
 
     def PrintUserAndHost(self):
@@ -395,17 +372,14 @@ class LoadAppWidget(QtWidgets.QMainWindow):
                     "Interpreters": self.buttonInterpreter,
                     "Modules": self.buttonModule,
                     "Commands": self.buttonCommand,
-                    "Directories": self.directory
+                    "Directories": self.directoryList
 
                 }
             }
 
             # os.environ['SUDO_ASKPASS'] = '/usr/bin/ssh-askpass'
-
             self.pin = '5454'
-
             cmd = ['sudo', '-S', 'python3', 'File_Opsave.py', str(self.Apps), str(self.appName), str(self.data)]
-
             try:
 
                 logging.warning('issue may rise cause of python3 dependency')
@@ -425,28 +399,54 @@ class LoadAppWidget(QtWidgets.QMainWindow):
     def SaveNewApp(self):
 
         try:
-            path = self.Apps + "/" + self.appName
-            os.mkdir(path)
-            with open(self.Apps + "/" + self.appName + "/" + self.appName + ".json", "w") as write_file:
-                self.data = {
-                    "appName" : self.appName,
-                    "Configuration" : {
-                        "Buttons" : self.buttonName,
-                        "Positions" : self.buttonPosition,
-                        "Interpreters": self.buttonInterpreter,
-                        "Modules": self.buttonModule,
-                        "Commands": self.buttonCommand,
-                        "Directories": self.directory
-                    }
+
+        # with open(self.Apps + "/" + self.appName + "/" + self.appName + ".json", "w") as write_file:
+            self.data = {
+                "appName" : self.appName,
+                "Configuration" : {
+                    "Buttons" : self.buttonName,
+                    "Positions" : self.buttonPosition,
+                    "Interpreters": self.buttonInterpreter,
+                    "Modules": self.buttonModule,
+                    "Commands": self.buttonCommand,
+                    "Directories": self.directoryList
                 }
-                json.dump(self.data, write_file, indent=5, separators=(',', ': '))
-            path = self.Apps + "/" + self.appName + "/icon"
-            os.mkdir(path)
-            shutil.copy2(self.icons + "/script.png", path)
-            os.rename( path + '/script.png', path + '/' + self.appName +'.png')
-            self.terminal.append('Success, Created' + self.appName)
+            }
+                # json.dump(self.data, write_file, indent=5, separators=(',', ': '))
+            self.pin = '5454'
+            mkdir = ['sudo', '-S', 'mkdir', self.appName]
+            mkdirIcon = ['sudo', '-S', 'mkdir', 'icon']
+            print(self.icons)
+            copy_rename_icon = ['sudo', '-S', 'cp', self.icons + '/script.png', self.Apps + '/' + self.appName + '/icon/'+ self.appName + '.png']
+            print(copy_rename_icon)
+            cmd = ['sudo', '-S', 'python3', 'File_Opsave.py', str(self.Apps), str(self.appName), str(self.data)]
+            try:
+
+                logging.warning('issue may rise cause of python3 dependency')
+                command = run(mkdir, stdout=PIPE, stderr=PIPE, input=self.pin.encode('UTF-8'), cwd=self.Apps)
+                command = run(mkdirIcon, stdout=PIPE, stderr=PIPE, input=self.pin.encode('UTF-8'), cwd=self.Apps +'/'+ self.appName)
+                command = run(copy_rename_icon, stdout=PIPE, stderr=PIPE, input=self.pin.encode('UTF-8'), cwd=self.Apps +'/'+ self.appName)
+                if len(command.stdout.decode('UTF-8')) == 0:
+                    print(command.stderr.decode('UTF-8'))
+                else:
+                    print(command.stdout.decode('UTF-8'))
+
+                command = run(cmd, stdout=PIPE, stderr=PIPE, input=self.pin.encode('UTF-8'), cwd=self.Operations)
+
+            except Exception as Argument:
+
+                # creating/opening a file
+                f = open(self.Operations + "/logs.txt", "a")
+
+                # writing in the file
+                f.write(str(Argument))
+
+                # closing the file
+                f.close()
+
+            self.terminal.append('>> Created App: ' + self.appName)
         except:
-            self.terminal.append('Could not Create App!, changes you make here wont be saved')
+            self.terminal.append('>> Could not Create App!, changes you make here won\'t be saved')
 
 
     def Hide(self):
@@ -461,7 +461,9 @@ class LoadAppWidget(QtWidgets.QMainWindow):
 
     def Clear(self):
         self.terminal.clear()
-        self.PrintUserAndHost()
+        # self.PrintUserAndHost()
+        text = '\r'
+        os.write(self.terminal.pty_m, text.encode(self.codec))
 
     def dragEnterEvent(self, e):
         e.accept()

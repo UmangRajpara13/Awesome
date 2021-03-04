@@ -49,19 +49,19 @@ class Ui_MiniWindow(QtWidgets.QMainWindow):
         self.removeDirectory.clicked.connect(self.RemoveDir)
 
     def SetupDirectoryList(self):
-        for i in range(len(self.parentWidget.directory)):
-            self.directoryList.addItem(self.parentWidget.directory[i])
+        for i in range(len(self.parentWidget.directoryList)):
+            self.directoryList.addItem(self.parentWidget.directoryList[i])
 
     def AddDir(self):
         self.link = str(QtWidgets.QFileDialog.getExistingDirectory(self, "Select Directory"))
         self.directoryList.addItem(self.link)
-        self.parentWidget.directory.append(self.link)
+        self.parentWidget.directoryList.append(self.link)
         self.parentWidget.directories.addItem(self.link)
         self.parentWidget.UpdateDirectories()
 
     def RemoveDir(self):
         self.directoryList.takeItem(self.row)
-        self.parentWidget.directory.pop(self.row)
+        self.parentWidget.directoryList.pop(self.row)
         self.parentWidget.UpdateDirectories()
 
     def GetSelection(self, item):
@@ -69,7 +69,7 @@ class Ui_MiniWindow(QtWidgets.QMainWindow):
 
     def LoadHomeApps(self):
         self.resize(635, 325)
-        self.appList = AllApps()
+        self.appList = AllApps(self)
         self.appList.setObjectName("appList")
         self.appList.setIconSize(QtCore.QSize(75, 75))
         self.appList.setFrameShape(QtWidgets.QFrame.NoFrame)
@@ -78,12 +78,21 @@ class Ui_MiniWindow(QtWidgets.QMainWindow):
         self.appList.setWordWrap(True)
         self.setObjectName("homeApps")
         self.verticalLayout.addWidget(self.appList)
-        self.refreashButton = QtWidgets.QPushButton(self.centralwidget)
-        self.refreashButton.setObjectName("refreashButton")
-        self.verticalLayout.addWidget(self.refreashButton)
+        self.New = QtWidgets.QPushButton(self.centralwidget)
+        self.New.setObjectName("New")
+        self.verticalLayout.addWidget(self.New)
+        self.deleteButton = QtWidgets.QPushButton(self.centralwidget)
+        self.deleteButton.setObjectName("deleteButton")
+        self.verticalLayout.addWidget(self.deleteButton)
         _translate = QtCore.QCoreApplication.translate
         self.setWindowTitle(_translate("Apps", "Apps"))
-        self.refreashButton.setText(_translate("Refreash", "Refreash"))
+        self.New.setText(_translate("New", "New"))
+        self.deleteButton.setText(_translate("Delete", "Delete"))
+        self.deleteButton.clicked.connect(self.appList.DeleteApp)
+        self.deleteButton.lower()
+        self.deleteButton.setEnabled(False)
+        self.deleteButton.setDown(True)
+
 
         self.appctxt = ApplicationContext()       # 1. Instantiate ApplicationContext
         self.Apps = self.appctxt.get_resource('Apps')

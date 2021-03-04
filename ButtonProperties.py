@@ -1,8 +1,4 @@
-
 from PyQt5 import QtCore, QtWidgets
-from os import listdir
-from os.path import isfile, join
-
 
 
 class ButtonProperties(QtWidgets.QMainWindow):

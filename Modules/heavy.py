@@ -4,7 +4,9 @@ from time import sleep
 class Process:
 
     def process(self):
-        for i in range(1000):
+    	count = input()
+    	print(count)
+        for i in range(count):
             sleep(0.01)
             print(i)
 
