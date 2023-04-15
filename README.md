@@ -1,7 +1,7 @@
 # Awesome
 
-Deprecated in favour of [Schnell Console](https://github.com/thevoyagingstar/Schnell)
+Deprecated in favour of [Schnell Console](https://github.com/UmangRajpara13/Sonic)
 
-Schnell Console was initially developed in Python using Qt framework. But the underlying libraries in python for PTY internface are not mature. 
+Sonic Console was initially developed in Python using Qt framework. But the underlying libraries in python for PTY internface are not mature. 
 
-This repo is no longer maintained.
+This repo will no longer be maintained.
