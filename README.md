@@ -1,7 +1,5 @@
-# Awesome
+# Awesome Terminal
 
-Deprecated in favour of [Sonic Console](https://github.com/UmangRajpara13/Sonic)
+:warning: This repo has been deprecated and will no longer be maintained. Please use [Arrow Terminal](https://github.com/UmangRajpara13/Arrow) instead
 
-Sonic Console was initially developed in Python using Qt framework. But the underlying libraries in python for PTY internface are not mature. 
 
-This repo will no longer be maintained.
